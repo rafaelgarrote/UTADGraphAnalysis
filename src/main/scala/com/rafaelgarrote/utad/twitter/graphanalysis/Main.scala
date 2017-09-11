@@ -3,25 +3,38 @@ package com.rafaelgarrote.utad.twitter.graphanalysis
 import com.rafaelgarrote.utad.twitter.graphanalysis.conf.AppProperties
 import com.rafaelgarrote.utad.twitter.graphanalysis.spark.SparkContextBuilder
 import org.neo4j.spark.Neo4j
+import com.rafaelgarrote.utad.twitter.graphanalysis.spark.GraphAnalysisDsl._
+import com.rafaelgarrote.utad.twitter.graphanalysis.spark.GenericWriter._
+import org.apache.spark.graphx.Edge
+import org.apache.spark.graphx.lib.PageRank
+import org.graphframes.GraphFrame
 
 object Main {
 
   def main(args: Array[String]): Unit = {
-    import org.graphframes._
     lazy val conf = AppProperties.config
     val sparkSession = SparkContextBuilder.createSessionContext(conf)
     implicit val session = sparkSession
     implicit val neo: Neo4j = Neo4j(session.sparkContext)
 
-    val rts: GraphFrame = neo
-      .cypher("MATCH (p:User)-[r:RT]->(m:User) RETURN p.screen_name , r.sentiment, m.screen_name")
-      .loadGraphFrame
-    rts.cache()
+    sparkSession.sparkContext.setLogLevel("ERROR")
 
-    val pageRankFrame = rts.pageRank.maxIter(5).run()
-    val ranked = pageRankFrame.vertices
-    ranked.printSchema()
-    ranked.orderBy(ranked.col("pagerank").desc).show()
-//    val top10 = ranked.orderBy(ranked.col("pagerank").desc).take(10)
+    lazy val datasource: String = AppProperties.getDataSource
+    lazy val options: Map[String, String] = AppProperties.getElasticserachPorpertiesAsMap
+
+    val sentimentGraph = neo.getSentimentRTGraph.cache()
+    val positiveSentimentGraph = sentimentGraph.getPositiveRTSubGraph.cache()
+    val negativeSentimentGraph = sentimentGraph.getNegativeRTSubGraph.cache()
+//    positiveSentimentGraph.runPageRank.getRank.toDF().show()
+//    negativeSentimentGraph.runPageRank.getRank.toDF().show()
+
+    positiveSentimentGraph.runTriangleCount
+    negativeSentimentGraph.runTriangleCount
+
+//    neo.getPositiveRTGraph.runTriangleCount
+//    neo.getPositiveRTGraph.runPageRank.getRank.toDF().writeDF(datasource, options)
+//    neo.getNegativeRTGraph.runPageRank.getRank.toDF().writeDF(datasource, options)
+
+
   }
 }

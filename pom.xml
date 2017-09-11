@@ -30,6 +30,12 @@
             <version>${spark.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-graphx_${scala.binary.version}</artifactId>
+            <version>${spark.version}</version>
+            <!--<scope>provided</scope>-->
+        </dependency>
+        <dependency>
             <groupId>org.elasticsearch</groupId>
             <artifactId>elasticsearch-spark-20_${scala.binary.version}</artifactId>
             <version>${elastic.version}</version>
@@ -44,7 +50,6 @@
             <artifactId>neo4j-spark-connector</artifactId>
             <version>2.0.0-M2</version>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/graphframes/graphframes -->
         <dependency>
             <groupId>graphframes</groupId>
             <artifactId>graphframes</artifactId>
