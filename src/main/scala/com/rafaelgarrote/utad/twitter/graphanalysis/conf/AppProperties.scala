@@ -12,11 +12,11 @@ object AppProperties {
 
   def getDataSource: String = Try(config.getString(elasticsearchDatasourceKey)).getOrElse("")
 
-  def getElasticserachPorpertiesAsMap: Map[String, String] =
+  def getElasticserachPorpertiesAsMap(resource: String): Map[String, String] =
     Map(
       "org.elasticsearch.spark.sql.nodes" -> config.getString("elasticsearch.org.elasticsearch.spark.sql.nodes"),
       "org.elasticsearch.spark.sql.port" -> config.getString("elasticsearch.org.elasticsearch.spark.sql.port"),
-      "resource" -> config.getString("elasticsearch.org.elasticsearch.spark.sql.resource")
+      "resource" -> config.getString(s"elasticsearch.org.elasticsearch.spark.sql.$resource.resource")
     )
 
   def getConfAsMap(path: String): Map[String, String] = {

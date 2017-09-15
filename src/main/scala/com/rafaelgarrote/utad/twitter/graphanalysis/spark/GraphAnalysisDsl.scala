@@ -3,9 +3,12 @@ package com.rafaelgarrote.utad.twitter.graphanalysis.spark
 import org.apache.spark.graphx.VertexRDD
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types.IntegerType
+import org.apache.spark.sql.types.LongType
+import org.apache.spark.sql.types.StructField
+import org.apache.spark.sql.types.StructType
 import org.graphframes.GraphFrame
 import org.neo4j.spark.Neo4j
-import org.neo4j.spark.Neo4jDataFrame
 
 class Neo4jFunctions(self: Neo4j)
                     (implicit session: SparkSession) {
@@ -44,19 +47,18 @@ class NetworkMeasuresAnalysis(self: GraphFrame)
     self.pageRank.maxIter(10).run()
 
   def getRank: DataFrame = {
-    val ranked = self.vertices
-    ranked.orderBy(ranked.col("pagerank").desc).toDF
+    self.vertices.toDF
+//    ranked.orderBy(ranked.col("pagerank").desc).toDF
   }
 
-  def runTriangleCount: Unit = {
+  def runTriangleCount: DataFrame = {
     val communities = self.toGraphX.triangleCount()
-    val ll: VertexRDD[Int] = communities.vertices
-    println(communities.vertices.collect().mkString("\n"))
-//    GraphFrame.fromGraphX(communities)
-  }
-
-  def persistGraph: Unit = {
-//    Neo4jDataFrame.mergeEdgeList(session.sparkContext, )
+    val verticesRdd: VertexRDD[Int] = communities.vertices
+//    val schema = StructType(List(
+//      StructField("id", LongType, false),
+//      StructField("community", IntegerType, false))
+//    )
+    session.sqlContext.createDataFrame(verticesRdd).selectExpr("_1 as id", "_2 as community")
   }
 
 }

@@ -8,6 +8,8 @@ import com.rafaelgarrote.utad.twitter.graphanalysis.spark.GenericWriter._
 import org.apache.spark.graphx.Edge
 import org.apache.spark.graphx.lib.PageRank
 import org.graphframes.GraphFrame
+import org.apache.spark.sql.functions.lit
+
 
 object Main {
 
@@ -20,21 +22,23 @@ object Main {
     sparkSession.sparkContext.setLogLevel("ERROR")
 
     lazy val datasource: String = AppProperties.getDataSource
-    lazy val options: Map[String, String] = AppProperties.getElasticserachPorpertiesAsMap
+    lazy val optionsRank: Map[String, String] = AppProperties.getElasticserachPorpertiesAsMap("rank")
+    lazy val optionsTriangle: Map[String, String] = AppProperties.getElasticserachPorpertiesAsMap("triangle")
 
     val sentimentGraph = neo.getSentimentRTGraph.cache()
     val positiveSentimentGraph = sentimentGraph.getPositiveRTSubGraph.cache()
     val negativeSentimentGraph = sentimentGraph.getNegativeRTSubGraph.cache()
-//    positiveSentimentGraph.runPageRank.getRank.toDF().show()
-//    negativeSentimentGraph.runPageRank.getRank.toDF().show()
+    val positiveRank = positiveSentimentGraph.runPageRank.getRank.toDF()
+      .withColumn("sentiment", lit("Positive")).cache()
+    val negativeRank = negativeSentimentGraph.runPageRank.getRank.toDF()
+      .withColumn("sentiment", lit("Negative")).cache()
 
-    positiveSentimentGraph.runTriangleCount
-    negativeSentimentGraph.runTriangleCount
+    positiveRank.union(negativeRank).writeDF(datasource, optionsRank)
 
-//    neo.getPositiveRTGraph.runTriangleCount
-//    neo.getPositiveRTGraph.runPageRank.getRank.toDF().writeDF(datasource, options)
-//    neo.getNegativeRTGraph.runPageRank.getRank.toDF().writeDF(datasource, options)
+    val positiveRankWithComunities = positiveSentimentGraph.runTriangleCount.join(positiveRank, "id")
+    val negativeRankWithCommunities = negativeSentimentGraph.runTriangleCount.join(negativeRank, "id")
 
+    positiveRankWithComunities.union(negativeRankWithCommunities).writeDF(datasource, optionsTriangle)
 
   }
 }
